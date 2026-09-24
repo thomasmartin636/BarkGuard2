@@ -8,6 +8,37 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+(() => {
+  if (!('wakeLock' in navigator) || !navigator.mediaDevices) return;
+  let lock = null;
+  const live = new Set();
+  async function grab() {
+    if (lock || !live.size || document.visibilityState !== 'visible') return;
+    try {
+      lock = await navigator.wakeLock.request('screen');
+      lock.addEventListener('release', () => { lock = null; });
+    } catch (e) { console.warn('Wake lock failed:', e); }
+  }
+  function check() { if (!live.size && lock) { lock.release(); lock = null; } }
+  const origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = async (c) => {
+    const stream = await origGUM(c);
+    stream.getAudioTracks().forEach(t => {
+      live.add(t);
+      t.addEventListener('ended', () => { live.delete(t); check(); });
+    });
+    grab();
+    return stream;
+  };
+  const origStop = MediaStreamTrack.prototype.stop;
+  MediaStreamTrack.prototype.stop = function () {
+    origStop.call(this); live.delete(this); check();
+  };
+  document.addEventListener('visibilitychange', grab);
+})();
+</script>
+
 </head><body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
