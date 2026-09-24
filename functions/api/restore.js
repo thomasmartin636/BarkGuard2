@@ -18,7 +18,7 @@ export async function onRequestPost({ request, env }) {
         method: "POST",
         headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
         body: JSON.stringify({
-          from: env.MAIL_FROM || "Bark Guard <support@nobarking.com>",
+          from: env.MAIL_FROM || "Bark Guard <support@nobarks.com>",
           to: [email.trim()],
           subject: "Your Bark Guard sign-in link",
           text: `Tap this link on the phone you want to use Bark Guard Pro on:\n\n${link}\n\nIt works for one hour. If you didn't ask for this, ignore this email.`,

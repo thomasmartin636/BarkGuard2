@@ -1,4 +1,4 @@
-# Bark Guard: going live on nobarking.com with Stripe
+# Bark Guard: going live on nobarks.com with Stripe
 
 What's in this repo:
 
@@ -63,26 +63,26 @@ After this, the repo should show `functions/`, `lib/`, `public/`, `README.md` an
 5. To test the free limit without waiting an hour, open the browser console on a computer and run
    `localStorage.setItem("bg.usage", JSON.stringify({day:new Date().toDateString(), secs:3590}))`, then reload and press Start. It should stop and show the upgrade screen after about 10 seconds.
 
-## Step 5: Buy nobarking.com and connect it (10 min)
+## Step 5: Buy nobarks.com and connect it (10 min)
 
-1. In Cloudflare, go to **Domain Registration › Register Domains** and search `nobarking.com`. Cloudflare sells domains at cost, about $10/yr for .com. If the name is taken, the search suggests close alternatives. Nothing in the code depends on the exact name. If you pick a different one, update the three `support@nobarking.com` mentions in `public/index.html`, `terms.html` and `privacy.html`.
-2. Once you own the domain, open your Pages project and go to **Custom domains › Set up a custom domain**. Enter `nobarking.com`, then add `www.nobarking.com` as well. Cloudflare creates the DNS records and the HTTPS certificate automatically. The microphone requires HTTPS, and you get it here for free.
-3. Set up support email: open the domain, then **Email › Email Routing**. Create `support@nobarking.com` and forward it to your Gmail.
+1. In Cloudflare, go to **Domain Registration › Register Domains** and search `nobarks.com`. Cloudflare sells domains at cost, about $10/yr for .com. If the name is taken, the search suggests close alternatives. Nothing in the code depends on the exact name. If you pick a different one, update the three `support@nobarks.com` mentions in `public/index.html`, `terms.html` and `privacy.html`.
+2. Once you own the domain, open your Pages project and go to **Custom domains › Set up a custom domain**. Enter `nobarks.com`, then add `www.nobarks.com` as well. Cloudflare creates the DNS records and the HTTPS certificate automatically. The microphone requires HTTPS, and you get it here for free.
+3. Set up support email: open the domain, then **Email › Email Routing**. Create `support@nobarks.com` and forward it to your Gmail.
 
 ## Step 6 (optional but recommended): "Restore purchase" emails
 
 This lets a subscriber who gets a new phone type their email and receive a sign-in link. Without this step, the button replies "contact support".
 
 1. Sign up at resend.com (the free tier covers 3,000 emails/month).
-2. Go to **Domains › Add domain › nobarking.com**. Resend can add its DNS records to Cloudflare for you. If it can't, copy them into Cloudflare DNS by hand.
+2. Go to **Domains › Add domain › nobarks.com**. Resend can add its DNS records to Cloudflare for you. If it can't, copy them into Cloudflare DNS by hand.
 3. Go to **API Keys › Create**, then add these in Cloudflare Pages variables:
    - `RESEND_API_KEY` (secret): the `re_…` key
-   - `MAIL_FROM`: `Bark Guard <support@nobarking.com>`
+   - `MAIL_FROM`: `Bark Guard <support@nobarks.com>`
 4. Retry the deployment.
 
 ## Step 7: Go live with real payments
 
-1. In Stripe, click **Activate payments**. Stripe asks for your details, your bank for payouts, and your website (`https://nobarking.com`). The Terms & refunds and Privacy pages linked in the app footer cover what Stripe reviewers look for. The terms promise a **14-day full refund**. Edit `public/terms.html` if you want a different policy.
+1. In Stripe, click **Activate payments**. Stripe asks for your details, your bank for payouts, and your website (`https://nobarks.com`). The Terms & refunds and Privacy pages linked in the app footer cover what Stripe reviewers look for. The terms promise a **14-day full refund**. Edit `public/terms.html` if you want a different policy.
 2. Switch the dashboard out of Test mode. Repeat Step 2 in live mode: live products and prices get new `price_…` IDs, you need the live `sk_live_…` key, and the Customer portal needs activating again.
 3. Replace `STRIPE_SECRET_KEY`, `PRICE_MONTHLY` and `PRICE_YEARLY` in Cloudflare with the live values, then retry the deployment.
 4. Buy it once yourself with a real card to confirm everything works. You can refund yourself from the Stripe dashboard.

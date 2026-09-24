@@ -3,7 +3,7 @@ import { json, stripe, originOf } from "../../lib/shared.js";
 
 export async function onRequestPost({ request, env }) {
   const { plan } = await request.json().catch(() => ({}));
-  const price = plan === "yearly" ? env.PRICE_YEARLY : env.PRICE_MONTHLY;
+  const price = (plan === "yearly" ? env.PRICE_YEARLY : env.PRICE_MONTHLY)?.trim();
   if (!price) return json({ error: "Prices are not configured yet." }, 500);
   const origin = originOf(request);
   try {
