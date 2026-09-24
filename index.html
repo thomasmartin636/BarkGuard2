@@ -1,0 +1,433 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>Bark Guard</title>
+<meta name="description" content="Listens for barking and plays a high-frequency interrupt tone.">
+<meta name="theme-color" content="#1F6F6B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bark Guard">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#EEF2EF; --panel:#FFFFFF; --ink:#18221F; --muted:#5B6863; --line:#D5DDD9;
+  --accent:#1F6F6B; --accent-ink:#FFFFFF; --bark:#E4572E; --ok:#2E8B57; --trace:#1F6F6B; --grid:#E3E9E6;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#101614; --panel:#18201D; --ink:#E6EEEA; --muted:#93A29C; --line:#2A3531;
+    --accent:#4FB3AC; --accent-ink:#0C1412; --bark:#FF7A52; --ok:#5CC98A; --trace:#4FB3AC; --grid:#222C28;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101614; --panel:#18201D; --ink:#E6EEEA; --muted:#93A29C; --line:#2A3531;
+  --accent:#4FB3AC; --accent-ink:#0C1412; --bark:#FF7A52; --ok:#5CC98A; --trace:#4FB3AC; --grid:#222C28;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--body);padding:0 16px;}
+.wrap{max-width:960px;margin:0 auto;padding-block:28px 48px;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font:700 clamp(28px,5vw,40px)/1.05 var(--display);margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:4px 0 0;max-width:60ch}
+.status{display:inline-flex;align-items:center;gap:8px;font:500 13px var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.status[data-s="listening"] .dot{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent)}
+.status[data-s="bark"] .dot{background:var(--bark);box-shadow:0 0 0 4px color-mix(in srgb,var(--bark) 30%,transparent)}
+.monitor{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px}
+.mon-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.readouts{display:flex;gap:24px;flex-wrap:wrap}
+.ro{display:grid}
+.ro b{font:500 26px/1 var(--mono);font-variant-numeric:tabular-nums}
+.ro span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ro.barks b{color:var(--bark)}
+canvas{width:100%;height:180px;display:block;border-radius:8px;background:var(--ground)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+button{font:600 15px var(--body);border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 16px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);padding:12px 22px;font-size:16px}
+button.primary.stop{background:var(--bark);border-color:var(--bark);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:16px;align-content:start}
+h2{font:700 18px var(--display);margin:0}
+.field{display:grid;gap:6px}
+.field label{font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.field label output{font:500 13px var(--mono);color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sounds{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.sounds label{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;gap:2px}
+.sounds label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.sounds input{position:absolute;opacity:0;pointer-events:none}
+.sounds strong{font-size:14px}
+.sounds small{color:var(--muted);font-size:12px;line-height:1.35}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.switch{display:flex;align-items:center;gap:10px;font-weight:600}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+.log{list-style:none;margin:0;padding:0;display:grid;max-height:340px;overflow:auto}
+.log li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font:13px var(--mono);font-variant-numeric:tabular-nums;align-items:center}
+.log li:last-child{border-bottom:0}
+.pill{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.sent{border-color:var(--bark);color:var(--bark)}
+.empty{color:var(--muted);font-size:14px;margin:0}
+.msg{border:1px solid var(--bark);color:var(--ink);background:color-mix(in srgb,var(--bark) 10%,var(--panel));border-radius:10px;padding:10px 14px;font-size:14px;margin:0}
+.tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bark Guard</h1>
+      <p class="sub">Leave this running near your dog. It listens for sharp, loud bursts in the bark range and plays an interrupt sound, then waits a cooldown before responding again.</p>
+    </div>
+    <div class="status" id="status" data-s="idle"><span class="dot"></span><span id="statusText">Not listening</span></div>
+  </header>
+
+  <div class="monitor">
+    <div class="mon-top">
+      <div class="readouts">
+        <div class="ro"><b id="roLevel">—</b><span>Level dB</span></div>
+        <div class="ro"><b id="roTrig">—</b><span>Trigger at</span></div>
+        <div class="ro barks"><b id="roBarks">0</b><span>Barks today</span></div>
+        <div class="ro"><b id="roSent">0</b><span>Sounds played</span></div>
+      </div>
+      <button class="primary" id="startBtn">Start listening</button>
+    </div>
+    <p class="msg" id="err" hidden></p>
+    <canvas id="scope" aria-label="Live sound level in the bark frequency range"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--trace)"></i>bark-band level</span>
+      <span><i style="background:var(--bark)"></i>trigger line</span>
+      <span><i style="background:var(--muted)"></i>background noise</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Response</h2>
+      <p class="hint">High-frequency tones tuned for the iPhone speaker. Dogs hear up to ~45 kHz; most adults stop hearing around 15–17 kHz, but children and teens may still hear up to ~20 kHz.</p>
+      <div class="sounds" role="radiogroup" aria-label="Tone pattern">
+        <label><input type="radio" name="snd" value="pulse" id="snd-pulse" checked><strong>Pulse</strong><small>Five short bursts. Most noticeable to dogs.</small></label>
+        <label><input type="radio" name="snd" value="warble" id="snd-warble"><strong>Warble</strong><small>1.2 s tone that wavers ±600 Hz.</small></label>
+        <label><input type="radio" name="snd" value="steady" id="snd-steady"><strong>Steady</strong><small>1 s pure tone. Gentlest.</small></label>
+      </div>
+      <div class="field">
+        <label for="freq">Frequency <output id="freqOut">18.0 kHz</output></label>
+        <input type="range" id="freq" min="15000" max="21000" step="250" value="18000">
+        <div class="row">
+          <button id="p17" type="button">17 kHz · louder</button>
+          <button id="p18" type="button">18 kHz · balanced</button>
+          <button id="p195" type="button">19.5 kHz · quietest to people</button>
+        </div>
+        <p class="hint">Higher is harder for people to hear, but the iPhone speaker gets weaker above ~18 kHz. Use Test: if you can hear it, move the slider up until you can't.</p>
+      </div>
+      <div class="field">
+        <label for="vol">Volume <output id="volOut">70%</output></label>
+        <input type="range" id="vol" min="5" max="100" value="70">
+        <p class="hint">Very high volume can make the speaker distort and click audibly. Around 60–80% is the sweet spot.</p>
+      </div>
+      <div class="row">
+        <button id="testBtn">Test tone</button>
+        <span class="hint" id="testResult">Start listening first so the test can also check the phone actually emits the tone.</span>
+      </div>
+      <label class="switch"><input type="checkbox" id="respond" checked> Play tone when a bark is detected</label>
+      <p class="tip">On iPhone: turn the ring/silent switch to ring, turn media volume up, keep Safari open in front with the phone plugged in, and turn Auto-Lock off (Settings › Display &amp; Brightness). Pair the tone with rewarding quiet, and stop using it if your dog seems frightened.</p>
+    </section>
+
+    <section class="card">
+      <h2>Detection</h2>
+      <div class="field">
+        <label for="sens">Sensitivity <output id="sensOut">6</output></label>
+        <input type="range" id="sens" min="1" max="10" value="6">
+        <p class="hint">How far above background noise a sound must jump. Raise it if barks are missed; lower it if TV or voices set it off.</p>
+      </div>
+      <div class="field">
+        <label for="cool">Cooldown <output id="coolOut">8 s</output></label>
+        <input type="range" id="cool" min="2" max="60" value="8">
+        <p class="hint">Minimum wait between sounds, so a barking fit gets one interrupt, not a barrage.</p>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <h2>Bark log</h2>
+        <button id="clearBtn">Clear log</button>
+      </div>
+      <ul class="log" id="log"></ul>
+      <p class="empty" id="logEmpty">No barks yet. Detected barks show here with time and loudness.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v);}catch(e){return d;} },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+
+  // ---------- settings ----------
+  const S = Object.assign({sens:6, cool:8, vol:70, snd:"pulse", hz:18000, respond:true}, store.get("bg.settings2", {}));
+  $("sens").value = S.sens; $("cool").value = S.cool; $("vol").value = S.vol; $("freq").value = S.hz; $("respond").checked = S.respond;
+  const r = document.querySelector(`input[name=snd][value="${S.snd}"]`); if (r) r.checked = true;
+  function syncOutputs(){
+    $("sensOut").textContent = S.sens; $("coolOut").textContent = S.cool + " s"; $("volOut").textContent = S.vol + "%";
+    $("freqOut").textContent = (S.hz/1000).toFixed(S.hz % 500 ? 2 : 1) + " kHz";
+    $("freq").value = S.hz;
+  }
+  syncOutputs();
+  const save = () => store.set("bg.settings2", S);
+  $("sens").oninput = e => { S.sens = +e.target.value; syncOutputs(); save(); };
+  $("cool").oninput = e => { S.cool = +e.target.value; syncOutputs(); save(); };
+  $("vol").oninput  = e => { S.vol = +e.target.value; syncOutputs(); save(); };
+  $("freq").oninput = e => { S.hz = +e.target.value; syncOutputs(); save(); };
+  [["p17",17000],["p18",18000],["p195",19500]].forEach(([id,hz]) => $(id).onclick = () => { S.hz = hz; syncOutputs(); save(); });
+  $("respond").onchange = e => { S.respond = e.target.checked; save(); };
+  document.querySelectorAll("input[name=snd]").forEach(el => el.onchange = () => { S.snd = el.value; save(); });
+
+  // ---------- log ----------
+  const todayKey = () => new Date().toDateString();
+  let log = store.get("bg.log", []);
+  let sentCount = 0;
+  function renderLog(){
+    const today = todayKey();
+    const todays = log.filter(e => new Date(e.t).toDateString() === today);
+    $("roBarks").textContent = todays.length;
+    $("roSent").textContent = todays.filter(e => e.sent).length;
+    const ul = $("log"); ul.textContent = "";
+    log.slice(-60).reverse().forEach(e => {
+      const li = document.createElement("li");
+      const d = new Date(e.t);
+      const t = document.createElement("span");
+      t.textContent = d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit", second:"2-digit"});
+      const lv = document.createElement("span"); lv.style.color = "var(--muted)";
+      lv.textContent = `+${e.over.toFixed(0)} dB over background`;
+      const p = document.createElement("span"); p.className = "pill" + (e.sent ? " sent" : "");
+      p.textContent = e.sent ? "sound played" : (e.cool ? "cooldown" : "logged");
+      li.append(t, lv, p); ul.append(li);
+    });
+    $("logEmpty").hidden = log.length > 0;
+  }
+  renderLog();
+  $("clearBtn").onclick = () => { log = []; store.set("bg.log", log); renderLog(); };
+
+  // ---------- audio ----------
+  let ctx = null, stream = null, analyser = null, proc = null, src = null;
+  let listening = false, freq = null;
+  let floorDb = -70, overCount = 0, inBark = false, barkPeak = -200;
+  let lastSound = 0, playingUntil = 0;
+  const hist = [], HMAX = 360; // ~8 s at 23 ms frames
+  let voiceBuffer = null;
+
+  function ensureCtx(){
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  const marginFor = s => 32 - (s - 1) * 2.6;   // sens 1 → 32 dB, sens 10 → ~8.6 dB
+
+  function bandLevel(){
+    analyser.getFloatFrequencyData(freq);
+    const binHz = ctx.sampleRate / analyser.fftSize;
+    const lo = Math.floor(400 / binHz), hi = Math.ceil(3500 / binHz);
+    let p = 0;
+    for (let i = lo; i <= hi; i++) p += Math.pow(10, freq[i] / 10);
+    return 10 * Math.log10(p / (hi - lo + 1) + 1e-12);
+  }
+
+  function frame(){
+    if (!listening) return;
+    const lvl = bandLevel();
+    const now = performance.now();
+    const muted = now < playingUntil;       // ignore our own sound
+    const trig = Math.max(floorDb + marginFor(S.sens), -62);
+    const over = lvl > trig && !muted;
+
+    if (!inBark && !muted) floorDb = floorDb * 0.996 + lvl * 0.004;
+    floorDb = Math.max(-100, Math.min(floorDb, -20));
+
+    if (over){ overCount++; barkPeak = Math.max(barkPeak, lvl); }
+    else overCount = 0;
+
+    let marked = false;
+    if (!inBark && overCount >= 2){ inBark = true; marked = true; onBark(lvl - floorDb); }
+    if (inBark && lvl < trig - 4){ inBark = false; barkPeak = -200; }
+
+    hist.push({lvl, trig, floor: floorDb, bark: marked, muted});
+    if (hist.length > HMAX) hist.shift();
+  }
+
+  function onBark(overDb){
+    const now = Date.now();
+    const canSend = S.respond && (now - lastSound) >= S.cool * 1000;
+    const entry = {t: now, over: overDb, sent: false, cool: S.respond && !canSend};
+    if (canSend){ lastSound = now; playResponse(); entry.sent = true; }
+    log.push(entry); if (log.length > 500) log = log.slice(-500);
+    store.set("bg.log", log); renderLog();
+    setStatus("bark", entry.sent ? "Bark — sound played" : "Bark detected");
+    clearTimeout(onBark.t); onBark.t = setTimeout(() => listening && setStatus("listening", "Listening"), 2000);
+  }
+
+  // ---------- response sounds ----------
+  // One pure sine at a time (no chords: two high tones mixing in the speaker
+  // create an audible low "difference tone"). Long cosine fades avoid clicks,
+  // which people would hear even when the tone itself is inaudible.
+  const FADE = 0.04;
+  function envelope(gain, t0, dur, peak){
+    const n = 64, up = new Float32Array(n), down = new Float32Array(n);
+    for (let i = 0; i < n; i++){ const k = 0.5 - 0.5*Math.cos(Math.PI*i/(n-1)); up[i] = k*peak; down[i] = (1-k)*peak; }
+    gain.setValueCurveAtTime(up, t0, FADE);
+    gain.setValueCurveAtTime(down, t0 + dur - FADE, FADE);
+  }
+  function burst(dest, hz, t0, dur, peak, warble){
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = hz; g.gain.value = 0;
+    if (warble){
+      const lfo = ctx.createOscillator(), depth = ctx.createGain();
+      lfo.frequency.value = 7; depth.gain.value = 600;
+      lfo.connect(depth).connect(o.frequency); lfo.start(t0); lfo.stop(t0 + dur + .05);
+    }
+    envelope(g.gain, t0, dur, peak);
+    o.connect(g).connect(dest); o.start(t0); o.stop(t0 + dur + .05);
+  }
+  function playResponse(kind = S.snd){
+    const c = ensureCtx(), t = c.currentTime + 0.05;
+    const peak = Math.pow(S.vol / 100, 1.5) * 0.95;
+    const hz = Math.min(S.hz, c.sampleRate / 2 - 1500);
+    const dest = c.destination;
+    let len;
+    if (kind === "warble"){ burst(dest, hz, t, 1.2, peak, true); len = 1.2; }
+    else if (kind === "steady"){ burst(dest, hz, t, 1.0, peak, false); len = 1.0; }
+    else { for (let i = 0; i < 5; i++) burst(dest, hz, t + i*0.22, 0.14, peak, false); len = 1.02; }
+    playingUntil = performance.now() + (len + 0.5) * 1000;
+    return {hz, len};
+  }
+
+  // Test: play the tone and, if the mic is on, measure it to prove the speaker emits it
+  function binLevel(hz){
+    analyser.getFloatFrequencyData(freq);
+    const i = Math.round(hz / (ctx.sampleRate / analyser.fftSize));
+    return Math.max(freq[i-1] ?? -200, freq[i], freq[i+1] ?? -200);
+  }
+  $("testBtn").onclick = () => {
+    const out = $("testResult");
+    const {hz, len} = playResponse();
+    if (!listening){ out.textContent = `Played ${(hz/1000).toFixed(1)} kHz. Start listening to verify the phone actually emits it.`; return; }
+    const before = binLevel(hz); let best = -200;
+    const iv = setInterval(() => best = Math.max(best, binLevel(hz)), 40);
+    out.textContent = "Measuring…";
+    setTimeout(() => {
+      clearInterval(iv);
+      const gain = best - before;
+      out.textContent = gain > 12
+        ? `✓ Speaker is emitting ${(hz/1000).toFixed(1)} kHz (+${gain.toFixed(0)} dB at the mic).`
+        : `Barely detected at ${(hz/1000).toFixed(1)} kHz (+${Math.max(0,gain).toFixed(0)} dB). Raise volume or lower the frequency.`;
+    }, len * 1000 + 150);
+  };
+  function loadVoice(){}
+
+  // ---------- start / stop ----------
+  let wakeLock = null;
+  function setStatus(s, text){ $("status").dataset.s = s; $("statusText").textContent = text; }
+  function showErr(m){ const el = $("err"); el.textContent = m; el.hidden = !m; }
+  function micMsg(e){
+    if (e && (e.name === "NotAllowedError" || e.name === "SecurityError"))
+      return "Microphone access was blocked. Allow the microphone for this page in your browser's site settings, then press Start again. On iPhone: Settings › Safari › Microphone, or tap the aA menu › Website Settings.";
+    if (e && e.name === "NotFoundError") return "No microphone was found. Connect one and try again.";
+    return "Couldn't start the microphone: " + (e && e.message || e);
+  }
+
+  async function start(){
+    showErr("");
+    try{
+      // Safari 17+: keep audio playing through the speaker alongside the mic
+      try{ if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; }catch(e){}
+      const c = ensureCtx();
+      stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
+      src = c.createMediaStreamSource(stream);
+      analyser = c.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.2;
+      freq = new Float32Array(analyser.frequencyBinCount);
+      // ScriptProcessor keeps running in background tabs, unlike timers
+      proc = c.createScriptProcessor(1024, 1, 1);
+      const sink = c.createGain(); sink.gain.value = 0;
+      src.connect(analyser); src.connect(proc); proc.connect(sink).connect(c.destination);
+      proc.onaudioprocess = frame;
+      floorDb = -70; hist.length = 0; listening = true;
+      $("startBtn").textContent = "Stop listening"; $("startBtn").classList.add("stop");
+      setStatus("listening", "Listening");
+      try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){}
+    }catch(e){ showErr(micMsg(e)); stop(); }
+  }
+  function stop(){
+    listening = false;
+    if (proc){ proc.onaudioprocess = null; proc.disconnect(); proc = null; }
+    if (src){ src.disconnect(); src = null; }
+    if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+    try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null;
+    $("startBtn").textContent = "Start listening"; $("startBtn").classList.remove("stop");
+    setStatus("idle", "Not listening"); $("roLevel").textContent = "—"; $("roTrig").textContent = "—";
+  }
+  $("startBtn").onclick = () => listening ? stop() : start();
+  document.addEventListener("visibilitychange", async () => {
+    if (listening && document.visibilityState === "visible"){ try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){} }
+  });
+
+  // ---------- scope drawing ----------
+  const cv = $("scope"), g2 = cv.getContext("2d");
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const MIN = -100, MAX = -10;
+  function draw(){
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== w*dpr || cv.height !== h*dpr){ cv.width = w*dpr; cv.height = h*dpr; }
+    g2.setTransform(dpr,0,0,dpr,0,0); g2.clearRect(0,0,w,h);
+    const y = v => h - 6 - (Math.max(MIN, Math.min(MAX, v)) - MIN) / (MAX - MIN) * (h - 12);
+    g2.strokeStyle = css("--grid"); g2.lineWidth = 1;
+    g2.fillStyle = css("--muted"); g2.font = "11px " + css("--mono");
+    for (let v = -90; v <= -20; v += 20){ g2.beginPath(); g2.moveTo(0, y(v)); g2.lineTo(w, y(v)); g2.stroke(); g2.fillText(v + " dB", 6, y(v) - 3); }
+
+    const data = hist.length ? hist : demo;
+    const x = i => w - (data.length - 1 - i) * (w / (HMAX - 1));
+    const line = (key, color, width, dash) => {
+      g2.beginPath(); g2.setLineDash(dash || []); g2.strokeStyle = color; g2.lineWidth = width;
+      data.forEach((p, i) => i ? g2.lineTo(x(i), y(p[key])) : g2.moveTo(x(i), y(p[key]))); g2.stroke(); g2.setLineDash([]);
+    };
+    // area under level
+    g2.beginPath(); data.forEach((p,i) => i ? g2.lineTo(x(i), y(p.lvl)) : g2.moveTo(x(i), y(p.lvl)));
+    g2.lineTo(x(data.length-1), h); g2.lineTo(x(0), h); g2.closePath();
+    g2.globalAlpha = .14; g2.fillStyle = css("--trace"); g2.fill(); g2.globalAlpha = 1;
+    line("floor", css("--muted"), 1, [3,4]);
+    line("trig", css("--bark"), 1.5, [6,4]);
+    line("lvl", css("--trace"), 1.8);
+    g2.fillStyle = css("--bark");
+    data.forEach((p,i) => { if (p.bark){ g2.beginPath(); g2.arc(x(i), y(p.lvl), 5, 0, 7); g2.fill(); } });
+    if (!hist.length){ g2.fillStyle = css("--muted"); g2.font = "12px " + css("--mono"); g2.fillText("example trace — press Start to see your room", 60, 18); }
+
+    if (listening && hist.length){
+      const last = hist[hist.length - 1];
+      $("roLevel").textContent = last.lvl.toFixed(0); $("roTrig").textContent = last.trig.toFixed(0);
+    }
+    requestAnimationFrame(draw);
+  }
+  // example trace shown before starting: quiet room with two barks
+  const demo = Array.from({length: HMAX}, (_, i) => {
+    const base = -72 + Math.sin(i/9)*2 + ((i*7919)%13)/4;
+    const b = [120, 128, 250].some(c => Math.abs(i - c) < 4) ? 30 - Math.abs(i - [120,128,250].find(c => Math.abs(i-c)<4))*6 : 0;
+    return {lvl: base + b, trig: -72 + marginFor(6), floor: -71, bark: i === 118 || i === 248};
+  });
+  requestAnimationFrame(draw);
+  loadVoice();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body></html>
